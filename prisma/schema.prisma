@@ -12,38 +12,57 @@ datasource db {
 }
 
 model katalog_menu {
-  id Int @id @default(autoincrement())
-  nama_item String
-  kategori kategori
-  stok Int
-  harga_modal Int
-  harga_jual Int
-  url_gambar String
-  created_at DateTime @default(now())
-  updated_at DateTime @updatedAt
-
-  detailPesanans detail_pesanan[]
-}
-
-model pesanan {
-  id              Int              @id @default(autoincrement())
-  nomor_pesanan   String           @unique
-  nama_pelanggan  String?
-  total_item      Int
-  total_harga     Int
-  metode_pembayaran metode_pembayaran
-  status          status_pesanan @default(belum_bayar)
+  id              Int      @id @default(autoincrement())
+  nama_item       String
+  kategori        kategori
+  stok            Int
+  harga_modal     Int
+  harga_jual      Int
+  url_gambar      String?
 
   detail_pesanan  detail_pesanan[]
 
-  created_at      DateTime         @default(now())
-  updated_at      DateTime         @updatedAt
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 }
 
-enum metode_pembayaran {
-  tunai
-  qris
-  transfer
+model pesanan {
+  id                  Int      @id @default(autoincrement())
+
+  nomor_pesanan       String   @unique
+
+  nama_pelanggan      String?
+
+  total_item          Int
+
+  total_harga         Int
+
+  metode_pembayaran   metode_pembayaran?
+
+  status              status_pesanan @default(belum_bayar)
+
+  detail_pesanan      detail_pesanan[]
+
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+}
+
+model detail_pesanan {
+  id              Int @id @default(autoincrement())
+
+  id_pesanan      Int
+  pesanan         pesanan @relation(fields: [id_pesanan], references: [id])
+
+  id_menu         Int
+  menu            katalog_menu @relation(fields: [id_menu], references: [id])
+
+  nama_menu       String
+  harga           Int
+  jumlah          Int
+  subtotal        Int
+
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
 }
 
 enum status_pesanan {
@@ -52,26 +71,11 @@ enum status_pesanan {
   hutang
 }
 
-model detail_pesanan {
-  id           Int      @id @default(autoincrement())
-
-  id_pesanan   Int
-  pesanan      pesanan  @relation(fields: [id_pesanan], references: [id])
-
-  id_menu      Int
-  menu         katalog_menu     @relation(fields: [id_menu], references: [id])
-
-  nama_menu    String
-  harga        Int
-  jumlah       Int
-  subtotal     Int
-
-  created_at   DateTime @default(now())
-  updated_at   DateTime @updatedAt
+enum metode_pembayaran {
+  tunai
+  qris
+  transfer
 }
-
-
-
 
 enum kategori {
   bakaran
@@ -79,5 +83,3 @@ enum kategori {
   minuman
   makanan
 }
-
-
