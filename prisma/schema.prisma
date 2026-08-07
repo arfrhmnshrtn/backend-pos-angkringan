@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,6 +8,82 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+// ==========================================
+// AUTH MODELS
+// ==========================================
+
+model user {
+  id          Int          @id @default(autoincrement())
+  fullname    String
+  pin         String
+  role        user_role
+  status      user_status  @default(ACTIVE)
+
+  refresh_tokens  refresh_token[]
+
+  created_at  DateTime     @default(now())
+  updated_at  DateTime     @updatedAt
+  deleted_at  DateTime?
+
+  @@index([role])
+  @@index([status])
+  @@index([deleted_at])
+}
+
+model permission {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+
+  role_permissions  role_permission[]
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+}
+
+model role_permission {
+  id            Int    @id @default(autoincrement())
+  role          user_role
+  permission_id Int
+
+  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@unique([role, permission_id], name: "role_permission_id")
+  @@index([role])
+  @@index([permission_id])
+}
+
+model refresh_token {
+  id          Int      @id @default(autoincrement())
+  user_id     Int
+  token_hash  String
+  expired_at  DateTime
+
+  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  created_at  DateTime @default(now())
+  updated_at  DateTime @updatedAt
+
+  @@index([user_id])
+  @@index([expired_at])
+}
+
+enum user_role {
+  OWNER
+  KASIR
+}
+
+enum user_status {
+  ACTIVE
+  INACTIVE
+}
+
+// ==========================================
+// POS MODELS
+// ==========================================
 
 model katalog_menu {
   id              Int      @id @default(autoincrement())
