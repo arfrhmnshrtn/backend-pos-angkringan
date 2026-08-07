@@ -1,0 +1,83 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model katalog_menu {
+  id Int @id @default(autoincrement())
+  nama_item String
+  kategori kategori
+  stok Int
+  harga_modal Int
+  harga_jual Int
+  url_gambar String
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  detailPesanans detail_pesanan[]
+}
+
+model pesanan {
+  id              Int              @id @default(autoincrement())
+  nomor_pesanan   String           @unique
+  nama_pelanggan  String?
+  total_item      Int
+  total_harga     Int
+  metode_pembayaran metode_pembayaran
+  status          status_pesanan @default(belum_bayar)
+
+  detail_pesanan  detail_pesanan[]
+
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+}
+
+enum metode_pembayaran {
+  tunai
+  qris
+  transfer
+}
+
+enum status_pesanan {
+  belum_bayar
+  lunas
+  hutang
+}
+
+model detail_pesanan {
+  id           Int      @id @default(autoincrement())
+
+  id_pesanan   Int
+  pesanan      pesanan  @relation(fields: [id_pesanan], references: [id])
+
+  id_menu      Int
+  menu         katalog_menu     @relation(fields: [id_menu], references: [id])
+
+  nama_menu    String
+  harga        Int
+  jumlah       Int
+  subtotal     Int
+
+  created_at   DateTime @default(now())
+  updated_at   DateTime @updatedAt
+}
+
+
+
+
+enum kategori {
+  bakaran
+  jajanan
+  minuman
+  makanan
+}
+
+
