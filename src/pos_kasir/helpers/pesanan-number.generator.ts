@@ -1,20 +1,25 @@
-export function generateNomorPesanan(lastNomor: string | null): string {
-  if (!lastNomor) {
+import { PrismaService } from '../../prisma/prisma.service.js';
+
+export async function generatePesananNumber(prisma: PrismaService): Promise<string> {
+  const latestPesanan = await prisma.pesanan.findFirst({
+    orderBy: {
+      id: 'desc',
+    },
+  });
+
+  if (!latestPesanan || !latestPesanan.nomor_pesanan.startsWith('PSN-')) {
     return 'PSN-0001';
   }
 
-  const parts = lastNomor.split('-');
-  if (parts.length !== 2) {
+  const currentNumberStr = latestPesanan.nomor_pesanan.replace('PSN-', '');
+  const currentNumber = parseInt(currentNumberStr, 10);
+  
+  if (isNaN(currentNumber)) {
     return 'PSN-0001';
   }
 
-  const numberPart = parseInt(parts[1], 10);
-  if (isNaN(numberPart)) {
-    return 'PSN-0001';
-  }
-
-  const nextNumber = numberPart + 1;
-  const nextNumberString = nextNumber.toString().padStart(4, '0');
-
-  return `PSN-${nextNumberString}`;
+  const nextNumber = currentNumber + 1;
+  const nextNumberStr = nextNumber.toString().padStart(4, '0');
+  
+  return `PSN-${nextNumberStr}`;
 }

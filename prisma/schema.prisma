@@ -14,17 +14,18 @@ datasource db {
 // ==========================================
 
 model user {
-  id          Int          @id @default(autoincrement())
-  fullname    String
-  pin         String
-  role        user_role
-  status      user_status  @default(ACTIVE)
+  id       Int         @id @default(autoincrement())
+  fullname String
+  pin      String
+  role     user_role
+  status   user_status @default(ACTIVE)
 
-  refresh_tokens  refresh_token[]
+  refresh_tokens     refresh_token[]
+  transaksi_keuangan transaksi_keuangan[]
 
-  created_at  DateTime     @default(now())
-  updated_at  DateTime     @updatedAt
-  deleted_at  DateTime?
+  created_at DateTime  @default(now())
+  updated_at DateTime  @updatedAt
+  deleted_at DateTime?
 
   @@index([role])
   @@index([status])
@@ -32,24 +33,24 @@ model user {
 }
 
 model permission {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
+  id   Int    @id @default(autoincrement())
+  name String @unique
 
-  role_permissions  role_permission[]
+  role_permissions role_permission[]
 
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model role_permission {
-  id            Int    @id @default(autoincrement())
+  id            Int       @id @default(autoincrement())
   role          user_role
   permission_id Int
 
-  permission    permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+  permission permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
 
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@unique([role, permission_id], name: "role_permission_id")
   @@index([role])
@@ -57,15 +58,15 @@ model role_permission {
 }
 
 model refresh_token {
-  id          Int      @id @default(autoincrement())
-  user_id     Int
-  token_hash  String
-  expired_at  DateTime
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token_hash String
+  expired_at DateTime
 
-  user        user     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
-  created_at  DateTime @default(now())
-  updated_at  DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 
   @@index([user_id])
   @@index([expired_at])
@@ -86,57 +87,97 @@ enum user_status {
 // ==========================================
 
 model katalog_menu {
-  id              Int      @id @default(autoincrement())
-  nama_item       String
-  kategori        kategori
-  stok            Int
-  harga_modal     Int
-  harga_jual      Int
-  url_gambar      String?
+  id          Int      @id @default(autoincrement())
+  nama_item   String
+  kategori    kategori
+  stok        Int
+  harga_modal Int
+  harga_jual  Int
+  url_gambar  String?
 
-  detail_pesanan  detail_pesanan[]
+  detail_pesanan detail_pesanan[]
 
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model pesanan {
-  id                  Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  nomor_pesanan       String   @unique
+  nomor_pesanan String @unique
 
-  nama_pelanggan      String?
+  nama_pelanggan String?
 
-  total_item          Int
+  total_item Int
 
-  total_harga         Int
+  total_harga Int
 
-  metode_pembayaran   metode_pembayaran?
+  metode_pembayaran metode_pembayaran?
 
-  status              status_pesanan @default(belum_bayar)
+  status status_pesanan @default(belum_bayar)
 
-  detail_pesanan      detail_pesanan[]
+  detail_pesanan     detail_pesanan[]
+  transaksi_keuangan transaksi_keuangan[]
 
-  created_at          DateTime @default(now())
-  updated_at          DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 model detail_pesanan {
-  id              Int @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  id_pesanan      Int
-  pesanan         pesanan @relation(fields: [id_pesanan], references: [id])
+  id_pesanan Int
+  pesanan    pesanan @relation(fields: [id_pesanan], references: [id])
 
-  id_menu         Int
-  menu            katalog_menu @relation(fields: [id_menu], references: [id])
+  id_menu Int
+  menu    katalog_menu @relation(fields: [id_menu], references: [id])
 
-  nama_menu       String
-  harga           Int
-  jumlah          Int
-  subtotal        Int
+  nama_menu String
+  harga     Int
+  jumlah    Int
+  subtotal  Int
 
-  created_at      DateTime @default(now())
-  updated_at      DateTime @updatedAt
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model kategori_keuangan {
+  id Int @id @default(autoincrement())
+
+  nama String @unique
+
+  jenis jenis_transaksi
+
+  transaksi_keuangan transaksi_keuangan[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model transaksi_keuangan {
+  id Int @id @default(autoincrement())
+
+  nomor_transaksi String @unique
+
+  jenis jenis_transaksi
+
+  id_kategori Int
+  kategori    kategori_keuangan @relation(fields: [id_kategori], references: [id])
+
+  nominal Int
+
+  metode_pembayaran metode_pembayaran?
+
+  keterangan String
+
+  id_pesanan Int?
+  pesanan    pesanan? @relation(fields: [id_pesanan], references: [id])
+
+  id_user Int
+  user    user @relation(fields: [id_user], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }
 
 enum status_pesanan {
@@ -149,6 +190,11 @@ enum metode_pembayaran {
   tunai
   qris
   transfer
+}
+
+enum jenis_transaksi {
+  pemasukan
+  pengeluaran
 }
 
 enum kategori {
