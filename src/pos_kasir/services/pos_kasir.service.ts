@@ -113,7 +113,7 @@ export class PosKasirService {
         skip,
         take,
         orderBy: { [sortField]: sortOrder },
-        include: { detail_pesanan: true },
+        include: { detail_pesanan: { include: { menu: true } } },
       }),
       this.prisma.pesanan.count({ where }),
     ]);

@@ -2,12 +2,17 @@ import { PrismaService } from '../../prisma/prisma.service.js';
 
 export async function generateTransaksiNumber(prisma: PrismaService): Promise<string> {
   const latestTransaksi = await prisma.transaksi_keuangan.findFirst({
+    where: {
+      nomor_transaksi: {
+        startsWith: 'TRX-',
+      },
+    },
     orderBy: {
       id: 'desc',
     },
   });
 
-  if (!latestTransaksi || !latestTransaksi.nomor_transaksi.startsWith('TRX-')) {
+  if (!latestTransaksi) {
     return 'TRX-000001';
   }
 
