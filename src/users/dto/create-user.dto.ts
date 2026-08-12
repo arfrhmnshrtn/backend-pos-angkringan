@@ -26,11 +26,11 @@ export class CreateUserDto {
   readonly pin!: string;
 
   @ApiProperty({
-    description: 'Role user (hanya KASIR yang bisa dibuat)',
-    enum: [Role.KASIR],
+    description: 'Role user',
+    enum: [Role.KASIR, Role.OWNER],
     example: Role.KASIR,
   })
   @IsNotEmpty({ message: 'Role wajib diisi' })
-  @IsEnum([Role.KASIR], { message: 'Hanya bisa membuat akun KASIR' })
+  @IsEnum([Role.KASIR, Role.OWNER], { message: 'Role harus KASIR atau OWNER' })
   readonly role!: Role;
 }

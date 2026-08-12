@@ -61,6 +61,20 @@ export class UsersController {
   async findKasirList() {
     return this.usersService.findKasirList();
   }
+  
+  @Public()
+  @Post('setup-owner')
+  @HttpCode(HttpStatus.CREATED)
+  @ApiOperation({
+    summary: 'Setup Owner Pertama (Public)',
+    description: 'Endpoint publik untuk membuat akun owner pertama kali jika database kosong. Hanya dapat dipanggil sekali.',
+  })
+  @ApiBody({ type: CreateUserDto })
+  @ApiResponse({ status: 201, description: 'Owner berhasil dibuat' })
+  @ApiResponse({ status: 403, description: 'Owner sudah ada di database' })
+  async setupOwner(@Body() createUserDto: CreateUserDto) {
+    return this.usersService.setupOwner(createUserDto);
+  }
 
   @Get(':id')
   @Roles(Role.OWNER)
@@ -81,8 +95,8 @@ export class UsersController {
   @Roles(Role.OWNER)
   @Permissions(PERMISSIONS.CASHIER_CREATE)
   @ApiOperation({
-    summary: 'Buat user baru',
-    description: 'Membuat akun kasir baru. Hanya owner yang bisa membuat akun.',
+    summary: 'Buat user baru (Kasir / Owner)',
+    description: 'Membuat akun kasir atau owner baru. Hanya owner yang bisa membuat akun.',
   })
   @ApiBody({ type: CreateUserDto })
   @ApiResponse({ status: 201, description: 'User berhasil dibuat' })

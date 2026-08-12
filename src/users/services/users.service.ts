@@ -96,6 +96,41 @@ export class UsersService {
     };
   }
 
+  async setupOwner(
+    createUserDto: CreateUserDto,
+  ): Promise<{ message: string; data: UserResponse }> {
+    const existingOwner = await this.prisma.user.findFirst({
+      where: { role: Role.OWNER, deleted_at: null },
+    });
+
+    if (existingOwner) {
+      throw new ForbiddenException('Owner sudah ada. Setup hanya bisa dilakukan sekali.');
+    }
+
+    if (createUserDto.role !== Role.OWNER) {
+      throw new ConflictException('Endpoint ini khusus untuk setup akun OWNER');
+    }
+
+    const hashedPin = await bcrypt.hash(createUserDto.pin, BCRYPT_SALT_ROUNDS);
+
+    const user = await this.prisma.user.create({
+      data: {
+        fullname: createUserDto.fullname,
+        pin: hashedPin,
+        role: Role.OWNER,
+        status: 'ACTIVE',
+      },
+      select: USER_SELECT,
+    });
+
+    this.logger.log(`Setup Owner pertama berhasil: ${user.fullname}`);
+
+    return {
+      message: 'Owner pertama berhasil dibuat',
+      data: user,
+    };
+  }
+
   async update(
     id: number,
     updateUserDto: UpdateUserDto,

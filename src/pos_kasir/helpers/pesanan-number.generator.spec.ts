@@ -1,4 +1,4 @@
-import { generateNomorPesanan } from './pesanan-number.generator';
+import { generateNomorPesanan } from './pesanan-number.generator.js';
 
 describe('pesanan-number.generator', () => {
   it('seharusnya mengembalikan PSN-0001 jika tidak ada pesanan sebelumnya', () => {

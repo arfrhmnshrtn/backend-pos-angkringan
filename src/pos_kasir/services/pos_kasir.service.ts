@@ -184,21 +184,88 @@ export class PosKasirService {
           });
         }
 
-        const existTransaksi = await tx.transaksi_keuangan.findFirst({
+        // Cek dan update debt jika ada
+        const existDebt = await tx.debt.findUnique({
           where: { id_pesanan: id },
         });
 
-        if (!existTransaksi) {
-           await tx.transaksi_keuangan.create({
+        if (existDebt && existDebt.status !== 'LUNAS' && existDebt.status !== 'DIBATALKAN') {
+          const sisaPembayaran = existDebt.remaining_amount;
+          
+          await tx.debt.update({
+            where: { id: existDebt.id },
             data: {
-              nomor_transaksi: pesanan.nomor_pesanan,
-              jenis: 'pemasukan',
-              id_kategori: kategori.id,
-              nominal: pesanan.total_harga,
-              metode_pembayaran: updateDto.metode_pembayaran || pesanan.metode_pembayaran,
-              keterangan: `Pembayaran Pesanan ${pesanan.nomor_pesanan}`,
+              paid_amount: existDebt.total_amount,
+              remaining_amount: 0,
+              status: 'LUNAS',
+            },
+          });
+
+          if (sisaPembayaran > 0) {
+            const date = new Date();
+            const uniqueSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const nomor_transaksi = `TRX-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${uniqueSuffix}`;
+
+            const newTransaksi = await tx.transaksi_keuangan.create({
+              data: {
+                nomor_transaksi,
+                jenis: 'pemasukan',
+                id_kategori: kategori.id,
+                nominal: sisaPembayaran,
+                metode_pembayaran: updateDto.metode_pembayaran || pesanan.metode_pembayaran || 'tunai',
+                keterangan: `Pelunasan Pesanan Hutang ${pesanan.nomor_pesanan}`,
+                id_pesanan: pesanan.id,
+                id_user: userId,
+              },
+            });
+
+            await tx.debt_payment.create({
+              data: {
+                id_debt: existDebt.id,
+                amount: sisaPembayaran,
+                payment_method: updateDto.metode_pembayaran || pesanan.metode_pembayaran || 'tunai',
+                id_user: userId,
+                id_transaksi_keuangan: newTransaksi.id,
+              },
+            });
+          }
+        } else {
+          const existTransaksi = await tx.transaksi_keuangan.findFirst({
+            where: { id_pesanan: id },
+          });
+
+          if (!existTransaksi) {
+             await tx.transaksi_keuangan.create({
+              data: {
+                nomor_transaksi: pesanan.nomor_pesanan,
+                jenis: 'pemasukan',
+                id_kategori: kategori.id,
+                nominal: pesanan.total_harga,
+                metode_pembayaran: updateDto.metode_pembayaran || pesanan.metode_pembayaran,
+                keterangan: `Pembayaran Pesanan ${pesanan.nomor_pesanan}`,
+                id_pesanan: pesanan.id,
+                id_user: userId,
+              },
+            });
+          }
+        }
+      } else if (updateDto.status === 'hutang') {
+        const existDebt = await tx.debt.findUnique({
+          where: { id_pesanan: id },
+        });
+
+        if (!existDebt) {
+          await tx.debt.create({
+            data: {
+              type: 'CUSTOMER',
+              customer_name: pesanan.nama_pelanggan || `Pelanggan POS ${pesanan.nomor_pesanan}`,
+              note: 'Otomatis dari transaksi POS',
+              total_amount: pesanan.total_harga,
+              paid_amount: 0,
+              remaining_amount: pesanan.total_harga,
+              status: 'BELUM_LUNAS',
               id_pesanan: pesanan.id,
-              id_user: userId,
+              created_by: userId,
             },
           });
         }

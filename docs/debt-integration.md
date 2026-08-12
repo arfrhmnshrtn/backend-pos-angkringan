@@ -1,0 +1,5 @@
+# Debt Integrations dengan Modul Lain
+
+1. **POS (Point of Sales)**: Menyediakan jembatan melalui endpoint conversion di mana `id_pesanan` didaftarkan ke `debt`. Pesanan akan berganti status secara internal menjadi `hutang`. Jika stok sudah berkurang di module POS, module Hutang tidak perlu mengurangi lagi, sehingga concern permodulan tetap solid (Separation of concern terjamin).
+2. **Income (Pemasukan) & Expense (Pengeluaran)**: Setiap payment success memanggil mekanisme insert data langsung ke `transaksi_keuangan` (yang merupakan representasi dari Pemasukan & Pengeluaran pada modul _Financial_ existing). Field `id_kategori` secara otomatis fallback dibuat khusus 'Pembayaran Piutang' atau 'Pembayaran Utang' demi simplisitas integrasi pelaporan di Dashboard POS.
+3. **Roles & Permission (Auth)**: Guard pada controller sangat disiplin mendelegasikan izin-izin modul seperti pembatalan (`debt.cancel`) maupun bayar utang (`debt.payment`) hanya kepada peran `OWNER` melalui seeding Role Permission. Kasir tidak memiliki akses langsung memanipulasi riwayat utang kecuali dibukakan di kemudian hari.

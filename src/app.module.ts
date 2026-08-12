@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module.js';
 import { UsersModule } from './users/users.module.js';
 import { RolesModule } from './roles/roles.module.js';
 import { PermissionsModule } from './permissions/permissions.module.js';
+import { DebtModule } from './debt/debt.module.js';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter.js';
 import { ResponseInterceptor } from './common/interceptors/response.interceptor.js';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard.js';
@@ -29,6 +30,7 @@ import { PermissionsGuard } from './auth/guards/permissions.guard.js';
     PermissionsModule,
     KatalogModule,
     PosKasirModule,
+    DebtModule,
   ],
   controllers: [AppController],
   providers: [

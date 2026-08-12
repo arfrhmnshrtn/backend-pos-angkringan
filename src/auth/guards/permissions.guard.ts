@@ -2,6 +2,7 @@ import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@
 import { Reflector } from '@nestjs/core';
 import { PERMISSIONS_KEY } from '../decorators/permissions.decorator.js';
 import type { JwtPayload } from '../interfaces/jwt-payload.interface.js';
+import { Role } from '../../common/enums/role.enum.js';
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -22,6 +23,10 @@ export class PermissionsGuard implements CanActivate {
 
     if (!user) {
       throw new ForbiddenException('Akses ditolak: user tidak ditemukan');
+    }
+
+    if (user.role === Role.OWNER) {
+      return true;
     }
 
     const hasPermission = requiredPermissions.every((permission) =>

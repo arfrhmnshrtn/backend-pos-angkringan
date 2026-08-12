@@ -25,6 +25,10 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Akses ditolak: user tidak ditemukan');
     }
 
+    if (user.role === Role.OWNER) {
+      return true;
+    }
+
     const hasRole = requiredRoles.includes(user.role);
 
     if (!hasRole) {

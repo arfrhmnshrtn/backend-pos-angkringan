@@ -22,6 +22,8 @@ model user {
 
   refresh_tokens     refresh_token[]
   transaksi_keuangan transaksi_keuangan[]
+  debt_created       debt[] @relation("UserCreatedDebt")
+  debt_payments      debt_payment[]
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -118,6 +120,7 @@ model pesanan {
 
   detail_pesanan     detail_pesanan[]
   transaksi_keuangan transaksi_keuangan[]
+  debt               debt?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -176,6 +179,8 @@ model transaksi_keuangan {
   id_user Int
   user    user @relation(fields: [id_user], references: [id])
 
+  debt_payment debt_payment?
+
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
 }
@@ -203,3 +208,70 @@ enum kategori {
   minuman
   makanan
 }
+
+// ==========================================
+// DEBT MODELS
+// ==========================================
+
+model debt {
+  id Int @id @default(autoincrement())
+  
+  type debt_type
+  
+  customer_name String?
+  supplier_name String?
+  
+  note String?
+  
+  total_amount Int
+  paid_amount Int @default(0)
+  remaining_amount Int
+  
+  status debt_status @default(BELUM_LUNAS)
+  
+  id_pesanan Int? @unique
+  pesanan pesanan? @relation(fields: [id_pesanan], references: [id])
+  
+  created_by Int
+  user user @relation("UserCreatedDebt", fields: [created_by], references: [id])
+
+  payments debt_payment[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model debt_payment {
+  id Int @id @default(autoincrement())
+  
+  id_debt Int
+  debt debt @relation(fields: [id_debt], references: [id], onDelete: Cascade)
+  
+  amount Int
+  
+  payment_method metode_pembayaran
+  
+  paid_at DateTime @default(now())
+  
+  id_user Int
+  user user @relation(fields: [id_user], references: [id])
+  
+  id_transaksi_keuangan Int? @unique
+  transaksi_keuangan transaksi_keuangan? @relation(fields: [id_transaksi_keuangan], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+enum debt_type {
+  CUSTOMER
+  SUPPLIER
+}
+
+enum debt_status {
+  BELUM_LUNAS
+  SEBAGIAN
+  LUNAS
+  DIBATALKAN
+}
+

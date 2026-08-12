@@ -35,6 +35,12 @@ export const PERMISSIONS = {
   CASHIER_DELETE: 'cashier.delete',
   ROLE_READ: 'role.read',
   ROLE_UPDATE: 'role.update',
+  DEBT_READ: 'debt.read',
+  DEBT_CREATE: 'debt.create',
+  DEBT_UPDATE: 'debt.update',
+  DEBT_CANCEL: 'debt.cancel',
+  DEBT_PAYMENT: 'debt.payment',
+  DEBT_DELETE: 'debt.delete',
 } as const;
 
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS);
