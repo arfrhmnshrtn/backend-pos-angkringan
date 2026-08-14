@@ -22,8 +22,11 @@ model user {
 
   refresh_tokens     refresh_token[]
   transaksi_keuangan transaksi_keuangan[]
-  debt_created       debt[] @relation("UserCreatedDebt")
+  debt_created       debt[]               @relation("UserCreatedDebt")
   debt_payments      debt_payment[]
+
+  waste_created   waste[]          @relation("UserCreatedWaste")
+  stock_movements stock_movement[]
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -97,7 +100,9 @@ model katalog_menu {
   harga_jual  Int
   url_gambar  String?
 
-  detail_pesanan detail_pesanan[]
+  detail_pesanan  detail_pesanan[]
+  wastes          waste[]
+  stock_movements stock_movement[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -215,25 +220,25 @@ enum kategori {
 
 model debt {
   id Int @id @default(autoincrement())
-  
+
   type debt_type
-  
+
   customer_name String?
   supplier_name String?
-  
+
   note String?
-  
-  total_amount Int
-  paid_amount Int @default(0)
+
+  total_amount     Int
+  paid_amount      Int @default(0)
   remaining_amount Int
-  
+
   status debt_status @default(BELUM_LUNAS)
-  
-  id_pesanan Int? @unique
-  pesanan pesanan? @relation(fields: [id_pesanan], references: [id])
-  
+
+  id_pesanan Int?     @unique
+  pesanan    pesanan? @relation(fields: [id_pesanan], references: [id])
+
   created_by Int
-  user user @relation("UserCreatedDebt", fields: [created_by], references: [id])
+  user       user @relation("UserCreatedDebt", fields: [created_by], references: [id])
 
   payments debt_payment[]
 
@@ -243,21 +248,21 @@ model debt {
 
 model debt_payment {
   id Int @id @default(autoincrement())
-  
+
   id_debt Int
-  debt debt @relation(fields: [id_debt], references: [id], onDelete: Cascade)
-  
+  debt    debt @relation(fields: [id_debt], references: [id], onDelete: Cascade)
+
   amount Int
-  
+
   payment_method metode_pembayaran
-  
+
   paid_at DateTime @default(now())
-  
+
   id_user Int
-  user user @relation(fields: [id_user], references: [id])
-  
-  id_transaksi_keuangan Int? @unique
-  transaksi_keuangan transaksi_keuangan? @relation(fields: [id_transaksi_keuangan], references: [id])
+  user    user @relation(fields: [id_user], references: [id])
+
+  id_transaksi_keuangan Int?                @unique
+  transaksi_keuangan    transaksi_keuangan? @relation(fields: [id_transaksi_keuangan], references: [id])
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -275,3 +280,109 @@ enum debt_status {
   DIBATALKAN
 }
 
+// ==========================================
+// INVENTORY & WASTE MODELS
+// ==========================================
+
+model ingredient {
+  id Int @id @default(autoincrement())
+
+  name          String
+  stock         Int    @default(0)
+  unit          String
+  cost_per_unit Int
+
+  wastes          waste[]
+  stock_movements stock_movement[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+}
+
+model waste {
+  id Int @id @default(autoincrement())
+
+  type waste_type
+
+  id_katalog_menu Int?
+  katalog_menu    katalog_menu? @relation(fields: [id_katalog_menu], references: [id])
+
+  id_ingredient Int?
+  ingredient    ingredient? @relation(fields: [id_ingredient], references: [id])
+
+  quantity      Int
+  unit          String
+  cost_per_unit Int
+  total_loss    Int
+
+  reason waste_reason
+  note   String?
+
+  created_by Int
+  user       user @relation("UserCreatedWaste", fields: [created_by], references: [id])
+
+  stock_movements stock_movement[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([type])
+  @@index([reason])
+  @@index([created_by])
+  @@index([created_at])
+}
+
+model stock_movement {
+  id Int @id @default(autoincrement())
+
+  type stock_movement_type
+
+  id_katalog_menu Int?
+  katalog_menu    katalog_menu? @relation(fields: [id_katalog_menu], references: [id])
+
+  id_ingredient Int?
+  ingredient    ingredient? @relation(fields: [id_ingredient], references: [id])
+
+  quantity     Int // Can be negative for OUT/WASTE, positive for IN
+  stock_before Int
+  stock_after  Int
+
+  reference_type String? // e.g. "WASTE", "ORDER", "MANUAL"
+  reference_id   Int?
+
+  id_waste       Int?
+  waste_relation waste? @relation(fields: [id_waste], references: [id])
+
+  created_by Int?
+  user       user? @relation(fields: [created_by], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([type])
+  @@index([created_at])
+}
+
+enum waste_type {
+  PRODUCT
+  INGREDIENT
+}
+
+enum waste_reason {
+  BASI
+  KADALUARSA
+  RUSAK
+  GOSONG
+  JATUH
+  SALAH_PRODUKSI
+  SISA_PRODUKSI
+  HILANG
+  LAINNYA
+}
+
+enum stock_movement_type {
+  IN
+  OUT
+  WASTE
+  ADJUSTMENT
+}

@@ -17,6 +17,7 @@ import { ResponseInterceptor } from './common/interceptors/response.interceptor.
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from './auth/guards/roles.guard.js';
 import { PermissionsGuard } from './auth/guards/permissions.guard.js';
+import { WastesModule } from './wastes/wastes.module.js';
 
 @Module({
   imports: [
@@ -33,6 +34,7 @@ import { PermissionsGuard } from './auth/guards/permissions.guard.js';
     PosKasirModule,
     DebtModule,
     AnalysisModule,
+    WastesModule,
   ],
   controllers: [AppController],
   providers: [

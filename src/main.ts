@@ -47,6 +47,7 @@ async function bootstrap() {
     .addTag('Users', 'Manajemen user dan kasir')
     .addTag('Roles', 'Manajemen role')
     .addTag('Permissions', 'Manajemen permission')
+    .addTag('Wastes', 'Manajemen pencatatan barang terbuang')
     .build();
 
   const document = SwaggerModule.createDocument(app, swaggerConfig);
