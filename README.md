@@ -25,6 +25,19 @@
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
 
+## Sales Analysis API
+Fitur Analisis Penjualan mengumpulkan dan menganalisis tranasaksi (LUNAS), mengukur laba kotor, item terlaris, rasio metode pembayaran, serta margin laba dengan penyesuaian Timezone WIB. 
+
+- **Endpoint:** `GET /analysis/sales`
+- **Permission:** `sales_analysis.read`
+- **Authentication:** Bearer JWT Required
+- **Docs:** [Dokumentasi API Analisis Penjualan](docs/api/sales-analysis.md)
+- **Contoh Request:**
+  ```bash
+  curl -X GET "http://localhost:3000/analysis/sales?period=30days" \
+    -H "Authorization: Bearer <accessToken>"
+  ```
+
 ## Project setup
 
 ```bash

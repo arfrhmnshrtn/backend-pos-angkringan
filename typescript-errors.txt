@@ -1,0 +1,1 @@
+src/pos_kasir/helpers/pesanan-number.generator.spec.ts(1,10): error TS2305: Module '"./pesanan-number.generator.js"' has no exported member 'generateNomorPesanan'.

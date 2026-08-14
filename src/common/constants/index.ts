@@ -41,6 +41,7 @@ export const PERMISSIONS = {
   DEBT_CANCEL: 'debt.cancel',
   DEBT_PAYMENT: 'debt.payment',
   DEBT_DELETE: 'debt.delete',
+  SALES_ANALYSIS_READ: 'sales_analysis.read',
 } as const;
 
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS);
