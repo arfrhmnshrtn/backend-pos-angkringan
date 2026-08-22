@@ -7,7 +7,10 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service.js';
 import { generatePesananNumber } from '../helpers/pesanan-number.generator.js';
-import { generatePagination, getPaginationParams } from '../helpers/pagination.helper.js';
+import {
+  generatePagination,
+  getPaginationParams,
+} from '../helpers/pagination.helper.js';
 import {
   CreatePesananDto,
   UpdatePembayaranDto,
@@ -35,7 +38,9 @@ export class PosKasirService {
         });
 
         if (!menu) {
-          throw new NotFoundException(`Menu dengan ID ${item.id_menu} tidak ditemukan`);
+          throw new NotFoundException(
+            `Menu dengan ID ${item.id_menu} tidak ditemukan`,
+          );
         }
 
         if (menu.stok < item.jumlah) {
@@ -90,7 +95,10 @@ export class PosKasirService {
   }
 
   async findAllOrders(filter: GetPesananFilterDto) {
-    const { skip, take, page, limit } = getPaginationParams(filter.page, filter.limit);
+    const { skip, take, page, limit } = getPaginationParams(
+      filter.page,
+      filter.limit,
+    );
     const where: Prisma.pesananWhereInput = {};
 
     if (filter.status) {
@@ -144,7 +152,11 @@ export class PosKasirService {
     };
   }
 
-  async updatePembayaran(id: number, updateDto: UpdatePembayaranDto, userId: number) {
+  async updatePembayaran(
+    id: number,
+    updateDto: UpdatePembayaranDto,
+    userId: number,
+  ) {
     return this.prisma.$transaction(async (tx) => {
       const pesanan = await tx.pesanan.findUnique({ where: { id } });
 
@@ -153,32 +165,37 @@ export class PosKasirService {
       }
 
       if (pesanan.status === 'lunas') {
-        throw new BadRequestException('Pesanan sudah lunas, tidak dapat diubah');
+        throw new BadRequestException(
+          'Pesanan sudah lunas, tidak dapat diubah',
+        );
       }
 
       const updatedPesanan = await tx.pesanan.update({
         where: { id },
         data: {
           status: updateDto.status,
-          metode_pembayaran: updateDto.metode_pembayaran || pesanan.metode_pembayaran,
+          metode_pembayaran:
+            updateDto.metode_pembayaran || pesanan.metode_pembayaran,
         },
       });
 
       if (updateDto.status === 'lunas') {
         if (!updateDto.metode_pembayaran && !pesanan.metode_pembayaran) {
-          throw new BadRequestException('Metode pembayaran wajib diisi saat status lunas');
+          throw new BadRequestException(
+            'Metode pembayaran wajib diisi saat status lunas',
+          );
         }
 
         // Cari Kategori 'Penjualan POS'
         let kategori = await tx.kategori_keuangan.findUnique({
-          where: { nama: 'Penjualan POS' },
+          where: { nama: 'Penjualan' },
         });
 
         if (!kategori) {
           // Buat otomatis jika belum ada untuk menghindari error
           kategori = await tx.kategori_keuangan.create({
             data: {
-              nama: 'Penjualan POS',
+              nama: 'Penjualan',
               jenis: 'pemasukan',
             },
           });
@@ -189,9 +206,13 @@ export class PosKasirService {
           where: { id_pesanan: id },
         });
 
-        if (existDebt && existDebt.status !== 'LUNAS' && existDebt.status !== 'DIBATALKAN') {
+        if (
+          existDebt &&
+          existDebt.status !== 'LUNAS' &&
+          existDebt.status !== 'DIBATALKAN'
+        ) {
           const sisaPembayaran = existDebt.remaining_amount;
-          
+
           await tx.debt.update({
             where: { id: existDebt.id },
             data: {
@@ -203,7 +224,9 @@ export class PosKasirService {
 
           if (sisaPembayaran > 0) {
             const date = new Date();
-            const uniqueSuffix = Math.floor(Math.random() * 10000).toString().padStart(4, '0');
+            const uniqueSuffix = Math.floor(Math.random() * 10000)
+              .toString()
+              .padStart(4, '0');
             const nomor_transaksi = `TRX-${date.getFullYear()}${String(date.getMonth() + 1).padStart(2, '0')}${String(date.getDate()).padStart(2, '0')}-${uniqueSuffix}`;
 
             const newTransaksi = await tx.transaksi_keuangan.create({
@@ -212,7 +235,10 @@ export class PosKasirService {
                 jenis: 'pemasukan',
                 id_kategori: kategori.id,
                 nominal: sisaPembayaran,
-                metode_pembayaran: updateDto.metode_pembayaran || pesanan.metode_pembayaran || 'tunai',
+                metode_pembayaran:
+                  updateDto.metode_pembayaran ||
+                  pesanan.metode_pembayaran ||
+                  'tunai',
                 keterangan: `Pelunasan Pesanan Hutang ${pesanan.nomor_pesanan}`,
                 id_pesanan: pesanan.id,
                 id_user: userId,
@@ -223,7 +249,10 @@ export class PosKasirService {
               data: {
                 id_debt: existDebt.id,
                 amount: sisaPembayaran,
-                payment_method: updateDto.metode_pembayaran || pesanan.metode_pembayaran || 'tunai',
+                payment_method:
+                  updateDto.metode_pembayaran ||
+                  pesanan.metode_pembayaran ||
+                  'tunai',
                 id_user: userId,
                 id_transaksi_keuangan: newTransaksi.id,
               },
@@ -235,13 +264,14 @@ export class PosKasirService {
           });
 
           if (!existTransaksi) {
-             await tx.transaksi_keuangan.create({
+            await tx.transaksi_keuangan.create({
               data: {
                 nomor_transaksi: pesanan.nomor_pesanan,
                 jenis: 'pemasukan',
                 id_kategori: kategori.id,
                 nominal: pesanan.total_harga,
-                metode_pembayaran: updateDto.metode_pembayaran || pesanan.metode_pembayaran,
+                metode_pembayaran:
+                  updateDto.metode_pembayaran || pesanan.metode_pembayaran,
                 keterangan: `Pembayaran Pesanan ${pesanan.nomor_pesanan}`,
                 id_pesanan: pesanan.id,
                 id_user: userId,
@@ -258,7 +288,9 @@ export class PosKasirService {
           await tx.debt.create({
             data: {
               type: 'CUSTOMER',
-              customer_name: pesanan.nama_pelanggan || `Pelanggan POS ${pesanan.nomor_pesanan}`,
+              customer_name:
+                pesanan.nama_pelanggan ||
+                `Pelanggan POS ${pesanan.nomor_pesanan}`,
               note: 'Otomatis dari transaksi POS',
               total_amount: pesanan.total_harga,
               paid_amount: 0,
@@ -291,7 +323,9 @@ export class PosKasirService {
       }
 
       if (pesanan.status === 'lunas') {
-        throw new BadRequestException('Pesanan yang sudah lunas tidak dapat dihapus');
+        throw new BadRequestException(
+          'Pesanan yang sudah lunas tidak dapat dihapus',
+        );
       }
 
       // Kembalikan Stok

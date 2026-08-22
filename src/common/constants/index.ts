@@ -47,6 +47,14 @@ export const PERMISSIONS = {
   WASTE_UPDATE: 'waste.update',
   WASTE_DELETE: 'waste.delete',
   WASTE_ANALYSIS: 'waste.analysis',
+  CASH_REPORT_READ: 'cash.report.read',
+  CASH_TRANSACTION_READ: 'cash.transaction.read',
+  CASH_BUDGET_READ: 'cash.budget.read',
+  CASH_BUDGET_CREATE: 'cash.budget.create',
+  CASH_BUDGET_UPDATE: 'cash.budget.update',
+  CASH_BUDGET_DELETE: 'cash.budget.delete',
+  CASH_RECONCILIATION_CREATE: 'cash.reconciliation.create',
+  CASH_ADJUSTMENT_CREATE: 'cash.adjustment.create',
 } as const;
 
 export const ALL_PERMISSIONS = Object.values(PERMISSIONS);

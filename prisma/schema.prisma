@@ -28,6 +28,9 @@ model user {
   waste_created   waste[]          @relation("UserCreatedWaste")
   stock_movements stock_movement[]
 
+  cash_balances      cash_balance[]      @relation("UserCreatedBalance")
+  budget_allocations budget_allocation[] @relation("UserCreatedBudget")
+
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
   deleted_at DateTime?
@@ -385,4 +388,39 @@ enum stock_movement_type {
   OUT
   WASTE
   ADJUSTMENT
+}
+
+// ==========================================
+// CASH MODELS
+// ==========================================
+
+model cash_balance {
+  id Int @id @default(autoincrement())
+
+  payment_method metode_pembayaran
+  amount         Int
+  effective_date DateTime          @db.Date
+
+  created_by Int
+  user       user @relation("UserCreatedBalance", fields: [created_by], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@unique([payment_method, effective_date])
+}
+
+model budget_allocation {
+  id Int @id @default(autoincrement())
+
+  name        String
+  percentage  Int
+  is_active   Boolean @default(true)
+  description String?
+
+  created_by Int
+  user       user @relation("UserCreatedBudget", fields: [created_by], references: [id])
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
 }

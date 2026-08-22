@@ -18,6 +18,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard.js';
 import { RolesGuard } from './auth/guards/roles.guard.js';
 import { PermissionsGuard } from './auth/guards/permissions.guard.js';
 import { WastesModule } from './wastes/wastes.module.js';
+import { CashModule } from './cash/cash.module.js';
 
 @Module({
   imports: [
@@ -35,6 +36,7 @@ import { WastesModule } from './wastes/wastes.module.js';
     DebtModule,
     AnalysisModule,
     WastesModule,
+    CashModule,
   ],
   controllers: [AppController],
   providers: [

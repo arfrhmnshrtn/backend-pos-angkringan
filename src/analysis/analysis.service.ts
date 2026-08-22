@@ -71,7 +71,7 @@ export class AnalysisService {
         endDate = todayStr;
         break;
       case AnalysisPeriod.LAST_7_DAYS:
-        startDate = this.adjustDays(todayStr, -6);
+        startDate = this.adjustDays(todayStr  , -6);
         endDate = todayStr;
         break;
       case AnalysisPeriod.LAST_30_DAYS:
