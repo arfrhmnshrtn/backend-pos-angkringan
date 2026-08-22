@@ -120,6 +120,9 @@ export class SalesAnalysisResponseDto {
   @ApiProperty({ type: [TopProductDto] })
   top_products: TopProductDto[];
 
+  @ApiProperty({ type: [TopProductDto], description: 'Daftar produk yang kurang laku atau terbawah' })
+  bad_products: TopProductDto[];
+
   @ApiProperty({ type: PaymentMethodsDto })
   payment_methods: PaymentMethodsDto;
 

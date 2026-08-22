@@ -170,6 +170,20 @@ export class AnalysisService {
       number,
       { id: number; name: string; category: string; quantity: number; revenue: number; cost: number; profit: number }
     >();
+
+    const allMenus = await this.prisma.katalog_menu.findMany();
+    for (const menu of allMenus) {
+      productStats.set(menu.id, {
+        id: menu.id,
+        name: menu.nama_item,
+        category: menu.kategori,
+        quantity: 0,
+        revenue: 0,
+        cost: 0,
+        profit: 0,
+      });
+    }
+
     const chartDataMap = new Map<string, { transaction_count: number; revenue: number }>();
 
     for (const order of validOrders) {
@@ -246,13 +260,19 @@ export class AnalysisService {
       revenue: chartDataMap.get(key)!.revenue,
     }));
 
-    // Build top products
-    const topProducts = Array.from(productStats.values())
-      .sort((a, b) => b.quantity - a.quantity)
-      .map((p, idx) => ({
-        ranking: idx + 1,
-        ...p,
-      }));
+    // Build products lists
+    const sortedProductsDesc = Array.from(productStats.values()).sort((a, b) => b.quantity - a.quantity);
+    
+    const topProducts = sortedProductsDesc.map((p, idx) => ({
+      ranking: idx + 1,
+      ...p,
+    }));
+
+    const sortedProductsAsc = Array.from(productStats.values()).sort((a, b) => a.quantity - b.quantity);
+    const badProducts = sortedProductsAsc.map((p, idx) => ({
+      ranking: idx + 1,
+      ...p,
+    }));
 
     return {
       period,
@@ -269,6 +289,7 @@ export class AnalysisService {
       },
       sales_chart: salesChart,
       top_products: topProducts,
+      bad_products: badProducts,
       payment_methods: paymentMethods,
       debt_summary: {
         total_debt: totalDebtObj._sum.total_amount || 0,

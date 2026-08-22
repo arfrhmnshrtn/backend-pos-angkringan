@@ -23,6 +23,9 @@ describe('AnalysisService', () => {
       debt_payment: {
         aggregate: jest.fn(),
       },
+      katalog_menu: {
+        findMany: jest.fn(),
+      },
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -46,6 +49,7 @@ describe('AnalysisService', () => {
       jest.spyOn(prismaService.transaksi_keuangan, 'aggregate').mockResolvedValue({ _sum: { nominal: 0 } } as any);
       jest.spyOn(prismaService.debt, 'aggregate').mockResolvedValue({ _sum: { total_amount: 0, remaining_amount: 0 } } as any);
       jest.spyOn(prismaService.debt_payment, 'aggregate').mockResolvedValue({ _sum: { amount: 0 } } as any);
+      jest.spyOn(prismaService.katalog_menu, 'findMany').mockResolvedValue([] as any);
     };
 
     it('should return default state when there are no transactions', async () => {
