@@ -22,6 +22,7 @@ model user {
 
   refresh_tokens     refresh_token[]
   transaksi_keuangan transaksi_keuangan[]
+  bahan_baku_created pengeluaran_bahan_baku[]
   debt_created       debt[]               @relation("UserCreatedDebt")
   debt_payments      debt_payment[]
 
@@ -193,7 +194,8 @@ model transaksi_keuangan {
   id_user Int
   user    user @relation(fields: [id_user], references: [id])
 
-  debt_payment debt_payment?
+  debt_payment           debt_payment?
+  pengeluaran_bahan_baku pengeluaran_bahan_baku?
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
@@ -221,6 +223,30 @@ enum kategori {
   jajanan
   minuman
   makanan
+}
+
+model pengeluaran_bahan_baku {
+  id Int @id @default(autoincrement())
+
+  nama_item    String
+  jumlah       Float
+  satuan       String
+  harga_satuan Int
+  total_harga  Int
+  catatan      String?
+
+  id_transaksi_keuangan Int @unique
+  transaksi_keuangan    transaksi_keuangan @relation(fields: [id_transaksi_keuangan], references: [id], onDelete: Cascade)
+
+  created_by Int
+  user       user @relation(fields: [created_by], references: [id])
+
+  tanggal DateTime @default(now())
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@index([created_by])
+  @@index([tanggal])
 }
 
 // ==========================================

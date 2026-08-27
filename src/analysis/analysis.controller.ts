@@ -8,11 +8,11 @@ import { PERMISSIONS } from '../common/constants/index.js';
 
 @ApiTags('Analysis')
 @ApiBearerAuth()
-@Controller('analysis/sales')
+@Controller('analysis')
 export class AnalysisController {
   constructor(private readonly analysisService: AnalysisService) {}
 
-  @Get()
+  @Get('sales')
   @Permissions(PERMISSIONS.SALES_ANALYSIS_READ)
   @ApiOperation({
     summary: 'Mendapatkan Analisis Penjualan',
@@ -29,7 +29,27 @@ export class AnalysisController {
   async getSalesAnalysis(@Query() query: SalesAnalysisQueryDto) {
     const data = await this.analysisService.getSalesAnalysis(query);
     return {
+      success: true,
       message: 'Analisis penjualan berhasil diambil',
+      data,
+    };
+  }
+
+  @Get('products-sold')
+  @Permissions(PERMISSIONS.SALES_ANALYSIS_READ)
+  @ApiOperation({
+    summary: 'Mendapatkan Summary Barang Terjual',
+    description: 'Endpoint ini memberikan informasi jumlah produk yang terjual berdasarkan periode.',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Summary barang terjual berhasil diambil.',
+  })
+  async getProductsSold(@Query() query: SalesAnalysisQueryDto) {
+    const data = await this.analysisService.getProductsSold(query);
+    return {
+      success: true,
+      message: 'Summary barang terjual berhasil diambil',
       data,
     };
   }

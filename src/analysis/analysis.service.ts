@@ -288,4 +288,103 @@ export class AnalysisService {
       },
     };
   }
+
+  async getProductsSold(query: SalesAnalysisQueryDto) {
+    const period = this.calculatePeriodBounds(query);
+    const startUtc = this.parseWibDateToUTC(period.start_date, false);
+    const endUtc = this.parseWibDateToUTC(period.end_date, true);
+
+    const validOrders = await this.prisma.pesanan.findMany({
+      where: {
+        status: 'lunas',
+        created_at: {
+          gte: startUtc,
+          lte: endUtc,
+        },
+      },
+      include: {
+        detail_pesanan: {
+          include: { menu: true },
+        },
+      },
+    });
+
+    const productStats = new Map<
+      number,
+      { id: number; name: string; category: string; quantity: number; revenue: number; cost: number; profit: number }
+    >();
+
+    let totalItemsSold = 0;
+    let totalRevenue = 0;
+    let totalCost = 0;
+
+    for (const order of validOrders) {
+      for (const item of order.detail_pesanan) {
+        // Gunakan snapshot yang ada di detail_pesanan, fallback ke harga menu saat ini jika 0
+        const modal = (item.harga_modal && item.harga_modal > 0) ? item.harga_modal : (item.menu?.harga_modal || 0);
+        const itemCost = modal * item.jumlah;
+        const itemRevenue = item.subtotal;
+        const itemProfit = itemRevenue - itemCost;
+
+        totalItemsSold += item.jumlah;
+        totalRevenue += itemRevenue;
+        totalCost += itemCost;
+
+        const prodId = item.id_menu;
+        if (!productStats.has(prodId)) {
+          productStats.set(prodId, {
+            id: prodId,
+            name: item.nama_menu,
+            category: item.menu?.kategori || 'unknown',
+            quantity: 0,
+            revenue: 0,
+            cost: 0,
+            profit: 0,
+          });
+        }
+        const ps = productStats.get(prodId)!;
+        ps.quantity += item.jumlah;
+        ps.revenue += itemRevenue;
+        ps.cost += itemCost;
+        ps.profit += itemProfit;
+      }
+    }
+
+    const sortedProductsDesc = Array.from(productStats.values()).sort((a, b) => {
+      if (b.quantity !== a.quantity) return b.quantity - a.quantity;
+      if (b.revenue !== a.revenue) return b.revenue - a.revenue;
+      return a.name.localeCompare(b.name);
+    });
+
+    const products = sortedProductsDesc.map((p, idx) => {
+      const selling_price = p.quantity > 0 ? Math.round(p.revenue / p.quantity) : 0;
+      const purchase_price = p.quantity > 0 ? Math.round(p.cost / p.quantity) : 0;
+      const profit_margin = p.revenue > 0 ? Number(((p.profit / p.revenue) * 100).toFixed(2)) : 0;
+
+      return {
+        ranking: idx + 1,
+        ...p,
+        selling_price,
+        purchase_price,
+        profit_margin,
+      };
+    });
+
+    const totalProfit = totalRevenue - totalCost;
+    const profitMargin = totalRevenue > 0 ? Number(((totalProfit / totalRevenue) * 100).toFixed(2)) : 0;
+    const totalProducts = products.length;
+
+    return {
+      period,
+      summary: {
+        total_products: totalProducts,
+        total_items_sold: totalItemsSold,
+        total_revenue: totalRevenue,
+        total_cost: totalCost,
+        total_profit: totalProfit,
+        profit_margin: profitMargin,
+      },
+      products,
+    };
+  }
 }

@@ -9,6 +9,8 @@ import { TransaksiKeuanganService } from './services/transaksi-keuangan.service.
 import { TransaksiKeuanganController } from './controllers/transaksi-keuangan.controller.js';
 import { LaporanService } from './services/laporan.service.js';
 import { LaporanController } from './controllers/laporan.controller.js';
+import { PengeluaranBahanBakuService } from './services/pengeluaran-bahan-baku.service.js';
+import { PengeluaranBahanBakuController } from './controllers/pengeluaran-bahan-baku.controller.js';
 
 @Module({
   controllers: [
@@ -17,6 +19,7 @@ import { LaporanController } from './controllers/laporan.controller.js';
     KategoriKeuanganController,
     TransaksiKeuanganController,
     LaporanController,
+    PengeluaranBahanBakuController,
   ],
   providers: [
     PosKasirService,
@@ -24,6 +27,7 @@ import { LaporanController } from './controllers/laporan.controller.js';
     KategoriKeuanganService,
     TransaksiKeuanganService,
     LaporanService,
+    PengeluaranBahanBakuService,
   ],
   exports: [
     PosKasirService,
