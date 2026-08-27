@@ -85,7 +85,19 @@ export class TransaksiKeuanganService {
         skip,
         take,
         orderBy: { [sortField]: sortOrder },
-        include: { kategori: true, user: { select: { id: true, fullname: true } } },
+        include: { 
+          kategori: true, 
+          user: { select: { id: true, fullname: true } },
+          pesanan: {
+            include: {
+              detail_pesanan: {
+                include: {
+                  menu: true,
+                }
+              }
+            }
+          }
+        },
       }),
       this.prisma.transaksi_keuangan.count({ where: whereCondition }),
     ]);
@@ -94,6 +106,31 @@ export class TransaksiKeuanganService {
       success: true,
       message: 'Data transaksi berhasil diambil',
       ...generatePagination(data, total, page, limit),
+    };
+  }
+
+  async deleteTransaksi(id: number) {
+    const trx = await this.prisma.transaksi_keuangan.findUnique({
+      where: { id },
+    });
+
+    if (!trx) {
+      throw new NotFoundException('Data transaksi tidak ditemukan');
+    }
+
+    if (trx.id_pesanan !== null) {
+      throw new BadRequestException(
+        'Transaksi pemasukan yang berasal dari penjualan otomatis tidak dapat dihapus secara manual.'
+      );
+    }
+
+    await this.prisma.transaksi_keuangan.delete({
+      where: { id },
+    });
+
+    return {
+      success: true,
+      message: 'Transaksi berhasil dihapus',
     };
   }
 }

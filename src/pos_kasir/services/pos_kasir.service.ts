@@ -55,6 +55,7 @@ export class PosKasirService {
           id_menu: menu.id,
           nama_menu: menu.nama_item,
           harga: menu.harga_jual,
+          harga_modal: menu.harga_modal,
           jumlah: item.jumlah,
           subtotal,
         });

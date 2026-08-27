@@ -132,18 +132,8 @@ export class AnalysisService {
       },
     });
 
-    // 2. Fetch expenses from transaksi_keuangan
-    const expenseSum = await this.prisma.transaksi_keuangan.aggregate({
-      where: {
-        jenis: 'pengeluaran',
-        created_at: {
-          gte: startUtc,
-          lte: endUtc,
-        },
-      },
-      _sum: { nominal: true },
-    });
-    const totalExpense = expenseSum._sum.nominal || 0;
+    // 2. Fetch expenses (Optimized: Removed to not include in analysis)
+    const totalExpense = 0;
 
     // 3. Fetch debts created and paid in this period
     const totalDebtObj = await this.prisma.debt.aggregate({
@@ -250,7 +240,7 @@ export class AnalysisService {
     const grossProfit = totalRevenue - totalCost;
     const profitMargin = totalRevenue > 0 ? (grossProfit / totalRevenue) * 100 : 0;
     const averageTransaction = transactionsCount > 0 ? Math.floor(totalRevenue / transactionsCount) : 0;
-    const netProfit = grossProfit - totalExpense;
+    const netProfit = grossProfit;
 
     // Build chart array
     const chartKeys = Array.from(chartDataMap.keys()).sort();

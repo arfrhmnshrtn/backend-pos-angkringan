@@ -132,6 +132,9 @@ model pesanan {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  @@index([status, created_at])
+  @@index([created_at])
 }
 
 model detail_pesanan {
@@ -143,13 +146,16 @@ model detail_pesanan {
   id_menu Int
   menu    katalog_menu @relation(fields: [id_menu], references: [id])
 
-  nama_menu String
-  harga     Int
-  jumlah    Int
-  subtotal  Int
+  nama_menu   String
+  harga       Int
+  harga_modal Int    @default(0)
+  jumlah      Int
+  subtotal    Int
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  @@index([id_pesanan])
 }
 
 model kategori_keuangan {
@@ -269,6 +275,9 @@ model debt_payment {
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+
+  @@index([paid_at])
+  @@index([id_debt])
 }
 
 enum debt_type {
@@ -413,14 +422,21 @@ model cash_balance {
 model budget_allocation {
   id Int @id @default(autoincrement())
 
-  name        String
-  percentage  Int
-  is_active   Boolean @default(true)
-  description String?
+  name            String
+  allocation_type budget_type @default(PERCENTAGE)
+  percentage      Int         @default(0)
+  fixed_amount    Int         @default(0)
+  is_active       Boolean     @default(true)
+  description     String?
 
   created_by Int
   user       user @relation("UserCreatedBudget", fields: [created_by], references: [id])
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+}
+
+enum budget_type {
+  PERCENTAGE
+  FIXED
 }

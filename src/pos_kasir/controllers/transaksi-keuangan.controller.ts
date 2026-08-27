@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, UseGuards, Delete, Param } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags, ApiOperation } from '@nestjs/swagger';
 import { TransaksiKeuanganService } from '../services/transaksi-keuangan.service.js';
 import { CreateTransaksiKeuanganDto, GetTransaksiFilterDto } from '../dto/transaksi-keuangan.dto.js';
@@ -34,5 +34,11 @@ export class TransaksiKeuanganController {
   @ApiOperation({ summary: 'Get all transaksi keuangan' })
   async findAll(@Query() filter: GetTransaksiFilterDto) {
     return this.transaksiService.findAll(filter);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Menghapus transaksi keuangan' })
+  async deleteTransaksi(@Param('id') id: string) {
+    return this.transaksiService.deleteTransaksi(Number(id));
   }
 }

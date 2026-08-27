@@ -1,4 +1,15 @@
-import { IsString, IsInt, IsNotEmpty, IsEnum, Min, Max, IsNumber, IsBoolean, IsOptional, ValidateIf } from 'class-validator';
+import {
+  IsString,
+  IsInt,
+  IsNotEmpty,
+  IsEnum,
+  Min,
+  Max,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  ValidateIf,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { metode_pembayaran } from '@prisma/client';
 
@@ -8,11 +19,23 @@ export class CreateBudgetAllocationDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ description: 'Percentage 0-100' })
+  @ApiProperty({ description: 'PERCENTAGE or FIXED', enum: ['PERCENTAGE', 'FIXED'], default: 'PERCENTAGE' })
+  @IsOptional()
+  @IsString()
+  allocation_type?: 'PERCENTAGE' | 'FIXED';
+
+  @ApiPropertyOptional({ description: 'Percentage 0-100 (required when allocation_type is PERCENTAGE)' })
+  @ValidateIf((o) => !o.allocation_type || o.allocation_type === 'PERCENTAGE')
   @IsInt()
   @Min(0)
   @Max(100)
-  percentage: number;
+  percentage?: number;
+
+  @ApiPropertyOptional({ description: 'Fixed amount in IDR (required when allocation_type is FIXED)' })
+  @ValidateIf((o) => o.allocation_type === 'FIXED')
+  @IsInt()
+  @Min(0)
+  fixed_amount?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -26,12 +49,23 @@ export class UpdateBudgetAllocationDto {
   @IsString()
   name?: string;
 
+  @ApiPropertyOptional({ description: 'PERCENTAGE or FIXED', enum: ['PERCENTAGE', 'FIXED'] })
+  @IsOptional()
+  @IsString()
+  allocation_type?: 'PERCENTAGE' | 'FIXED';
+
   @ApiPropertyOptional({ description: 'Percentage 0-100' })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(100)
   percentage?: number;
+
+  @ApiPropertyOptional({ description: 'Fixed amount in IDR' })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  fixed_amount?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
