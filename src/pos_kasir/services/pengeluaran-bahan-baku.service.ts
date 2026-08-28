@@ -28,46 +28,85 @@ export class PengeluaranBahanBakuService {
   }
 
   async create(createDto: CreatePengeluaranBahanBakuDto, userId: number) {
-    const total_price = Math.round(createDto.quantity * createDto.unit_price);
+    const total_price = Math.round(createDto.total_price);
+    const unit_price = Math.round(total_price / createDto.quantity);
     const kategori = await this.getOrCreateKategoriBahanBaku();
 
-    // Use transaction to ensure expense and detail are consistent
+    // Check for existing by case-insensitive name match
+    const existingList = await this.prisma.pengeluaran_bahan_baku.findMany({
+      where: {
+        nama_item: {
+          equals: createDto.item_name,
+          mode: 'insensitive',
+        }
+      }
+    });
+
+    const existing = existingList.find(e => e.satuan.toLowerCase() === createDto.unit.trim().toLowerCase());
+    const existingDiffUnit = existingList.find(e => e.satuan.toLowerCase() !== createDto.unit.trim().toLowerCase());
+
+    if (!existing && existingDiffUnit) {
+       throw new BadRequestException('Item sudah terdaftar dengan satuan berbeda.');
+    }
+
     const result = await this.prisma.$transaction(async (tx) => {
       const nomor_transaksi = await generateTransaksiNumber(tx as any);
 
+      // Selalu catat sebagai histori transaksi keuangan baru (Cash Flow)
       const transaksi = await tx.transaksi_keuangan.create({
         data: {
           nomor_transaksi,
           jenis: 'pengeluaran',
           id_kategori: kategori.id,
           nominal: total_price,
-          metode_pembayaran: 'tunai', // Default to tunai, or can be null if not needed immediately
-          keterangan: createDto.note || `Pembelian bahan baku: ${createDto.item_name}`,
+          metode_pembayaran: 'tunai', 
+          keterangan: createDto.note || `Pembelian bahan baku: ${createDto.item_name} ${createDto.quantity} ${createDto.unit}`,
           id_user: userId,
-          pengeluaran_bahan_baku: {
-            create: {
-              nama_item: createDto.item_name,
-              jumlah: createDto.quantity,
-              satuan: createDto.unit,
-              harga_satuan: Math.round(createDto.unit_price),
-              total_harga: total_price,
-              catatan: createDto.note,
-              created_by: userId,
-            },
-          },
-        },
-        include: {
-          pengeluaran_bahan_baku: true,
         },
       });
 
-      return transaksi;
+      let updatedBahanBaku;
+      if (existing) {
+         // UPSERT: update existing record with accumulated quantity
+         const newQuantity = existing.jumlah + createDto.quantity;
+         const newTotalHarga = existing.total_harga + total_price;
+         // Rata-rata harga satuan
+         const newHargaSatuan = Math.round(newTotalHarga / newQuantity);
+
+         updatedBahanBaku = await tx.pengeluaran_bahan_baku.update({
+            where: { id: existing.id },
+            data: {
+               jumlah: newQuantity,
+               total_harga: newTotalHarga,
+               harga_satuan: newHargaSatuan,
+               catatan: createDto.note,
+               id_transaksi_keuangan: transaksi.id,
+               updated_at: new Date(),
+            }
+         });
+      } else {
+         // CREATE new stock record
+         updatedBahanBaku = await tx.pengeluaran_bahan_baku.create({
+            data: {
+              nama_item: createDto.item_name,
+              jumlah: createDto.quantity,
+              satuan: createDto.unit,
+              harga_satuan: unit_price,
+              total_harga: total_price,
+              catatan: createDto.note,
+              created_by: userId,
+              id_transaksi_keuangan: transaksi.id,
+            }
+         });
+      }
+
+      return updatedBahanBaku;
     });
 
     return {
       success: true,
-      message: 'Pengeluaran bahan baku berhasil dibuat',
-      data: result.pengeluaran_bahan_baku,
+      message: existing ? 'Pengeluaran bahan baku berhasil diperbarui' : 'Pengeluaran bahan baku berhasil ditambahkan',
+      data: result,
     };
   }
 
@@ -83,7 +122,7 @@ export class PengeluaranBahanBakuService {
 
     const data = await this.prisma.pengeluaran_bahan_baku.findMany({
       where,
-      orderBy: { tanggal: 'desc' },
+      orderBy: { updated_at: 'desc' },
       include: {
         transaksi_keuangan: {
           select: { id: true, metode_pembayaran: true }
@@ -117,32 +156,32 @@ export class PengeluaranBahanBakuService {
       throw new NotFoundException('Data pengeluaran bahan baku tidak ditemukan');
     }
 
-    // calculate new total
+    // Hanya menggunakan kuantitas input untuk menggantikan kuantitas lama
     const quantity = updateDto.quantity !== undefined ? updateDto.quantity : existing.jumlah;
-    const unit_price = updateDto.unit_price !== undefined ? updateDto.unit_price : existing.harga_satuan;
-    const total_price = Math.round(quantity * unit_price);
+    const total_price = updateDto.total_price !== undefined ? Math.round(updateDto.total_price) : existing.total_harga;
+    const unit_price = Math.round(total_price / quantity);
 
     const result = await this.prisma.$transaction(async (tx) => {
       const updatedBahanBaku = await tx.pengeluaran_bahan_baku.update({
         where: { id },
         data: {
           nama_item: updateDto.item_name,
-          jumlah: updateDto.quantity,
+          jumlah: quantity, // Langsung direplace agar tidak akumulasi ganda
           satuan: updateDto.unit,
-          harga_satuan: updateDto.unit_price ? Math.round(updateDto.unit_price) : undefined,
+          harga_satuan: unit_price,
           total_harga: total_price,
           catatan: updateDto.note,
         },
       });
 
-      // Update nominal at expense
-      await tx.transaksi_keuangan.update({
-        where: { id: existing.id_transaksi_keuangan },
-        data: {
-          nominal: total_price,
-          keterangan: updateDto.note !== undefined ? updateDto.note : existing.transaksi_keuangan.keterangan,
-        },
-      });
+      // Kita amankan history dengan TIDAK menimpa nominal transaksi_keuangan yang terkait,
+      // karena total_price sekarang merepresentasikan total akumulatif inventori stoknya!
+      if (updateDto.note !== undefined && existing.transaksi_keuangan) {
+          await tx.transaksi_keuangan.update({
+              where: { id: existing.id_transaksi_keuangan },
+              data: { keterangan: updateDto.note }
+          });
+      }
 
       return updatedBahanBaku;
     });
@@ -163,10 +202,9 @@ export class PengeluaranBahanBakuService {
       throw new NotFoundException('Data pengeluaran bahan baku tidak ditemukan');
     }
 
-    // Deleting the transaksi_keuangan will also cascade delete the pengeluaran_bahan_baku
-    // as we added `onDelete: Cascade` in prisma schema.
-    await this.prisma.transaksi_keuangan.delete({
-      where: { id: existing.id_transaksi_keuangan },
+    // Kita hanya hapus bahan bakunya dan biarkan history transaksi pengeluarannya tetap ada
+    await this.prisma.pengeluaran_bahan_baku.delete({
+      where: { id },
     });
 
     return {

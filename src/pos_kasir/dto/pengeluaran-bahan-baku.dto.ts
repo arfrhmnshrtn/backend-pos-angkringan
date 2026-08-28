@@ -18,7 +18,7 @@ export class CreatePengeluaranBahanBakuDto {
   @ApiProperty()
   @IsNumber()
   @Min(0)
-  unit_price: number;
+  total_price: number;
 
   @ApiPropertyOptional()
   @IsOptional()
@@ -47,7 +47,7 @@ export class UpdatePengeluaranBahanBakuDto {
   @IsOptional()
   @IsNumber()
   @Min(0)
-  unit_price?: number;
+  total_price?: number;
 
   @ApiPropertyOptional()
   @IsOptional()
