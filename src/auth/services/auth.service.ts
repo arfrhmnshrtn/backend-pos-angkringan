@@ -60,7 +60,7 @@ export class AuthService {
     }
 
     // Get permissions
-    const permissions = await this.getUserPermissions(role);
+    const permissions = await this.getUserPermissions(role, user.id);
 
     // Generate tokens
     const payload: JwtPayload = {
@@ -147,7 +147,7 @@ export class AuthService {
 
     // Get permissions
     const role = user.role as Role;
-    const permissions = await this.getUserPermissions(role);
+    const permissions = await this.getUserPermissions(role, user.id);
 
     // Generate new tokens
     const payload: JwtPayload = {
@@ -287,13 +287,19 @@ export class AuthService {
     return kasir;
   }
 
-  private async getUserPermissions(role: Role): Promise<string[]> {
-    const rolePermissions = await this.prisma.role_permission.findMany({
-      where: { role: role },
+  private async getUserPermissions(role: Role, userId: number): Promise<string[]> {
+    if (role === Role.OWNER) {
+      const allPermissions = await this.prisma.permission.findMany({ select: { name: true } });
+      return allPermissions.map((p) => p.name);
+    }
+    
+    // KASIR
+    const userPermissions = await (this.prisma as any).user_permission.findMany({
+      where: { user_id: userId },
       include: { permission: { select: { name: true } } },
     });
 
-    return rolePermissions.map((rp) => rp.permission.name);
+    return userPermissions.map((up: any) => up.permission.name);
   }
 
   private async generateTokens(payload: JwtPayload): Promise<{

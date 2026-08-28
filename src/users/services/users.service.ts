@@ -13,12 +13,14 @@ import type { CreateUserDto } from '../dto/create-user.dto.js';
 import type { UpdateUserDto } from '../dto/update-user.dto.js';
 import type { UpdateStatusDto } from '../dto/update-status.dto.js';
 import type { ResetPinDto } from '../dto/reset-pin.dto.js';
+import type { ChangePinDto } from '../dto/change-pin.dto.js';
 
 export interface UserResponse {
   readonly id: number;
   readonly fullname: string;
   readonly role: string;
   readonly status: string;
+  readonly permissions?: number[];
   readonly created_at: Date;
   readonly updated_at: Date;
 }
@@ -28,9 +30,20 @@ const USER_SELECT = {
   fullname: true,
   role: true,
   status: true,
+  user_permissions: {
+    select: { permission: { select: { id: true, name: true } } }
+  },
   created_at: true,
   updated_at: true,
-} as const;
+} as any;
+
+function mapUserResponse(user: any): UserResponse {
+  const { user_permissions, ...rest } = user;
+  return {
+    ...rest,
+    permissions: user_permissions ? user_permissions.map((up: any) => up.permission.id) : [],
+  };
+}
 
 @Injectable()
 export class UsersService {
@@ -47,7 +60,7 @@ export class UsersService {
 
     return {
       message: 'Daftar user berhasil diambil',
-      data: users,
+      data: users.map(mapUserResponse),
     };
   }
 
@@ -63,7 +76,7 @@ export class UsersService {
 
     return {
       message: 'Detail user berhasil diambil',
-      data: user,
+      data: mapUserResponse(user),
     };
   }
 
@@ -71,12 +84,10 @@ export class UsersService {
     createUserDto: CreateUserDto,
     currentUserRole: Role,
   ): Promise<{ message: string; data: UserResponse }> {
-    // Only OWNER can create users
     if (currentUserRole !== Role.OWNER) {
       throw new ForbiddenException('Hanya owner yang bisa membuat akun');
     }
 
-    // Hash PIN
     const hashedPin = await bcrypt.hash(createUserDto.pin, BCRYPT_SALT_ROUNDS);
 
     const user = await this.prisma.user.create({
@@ -84,7 +95,16 @@ export class UsersService {
         fullname: createUserDto.fullname,
         pin: hashedPin,
         role: createUserDto.role,
-      },
+        ...(createUserDto.role === Role.KASIR && createUserDto.permissionIds && createUserDto.permissionIds.length > 0
+          ? {
+              user_permissions: {
+                create: createUserDto.permissionIds.map((id: number) => ({
+                  permission_id: id,
+                })),
+              },
+            }
+          : {}),
+      } as any, // Cast entire data to any to avoid Prisma strong type error before generate
       select: USER_SELECT,
     });
 
@@ -92,7 +112,7 @@ export class UsersService {
 
     return {
       message: 'User berhasil dibuat',
-      data: user,
+      data: mapUserResponse(user),
     };
   }
 
@@ -127,7 +147,7 @@ export class UsersService {
 
     return {
       message: 'Owner pertama berhasil dibuat',
-      data: user,
+      data: mapUserResponse(user),
     };
   }
 
@@ -148,22 +168,59 @@ export class UsersService {
       throw new NotFoundException('User tidak ditemukan');
     }
 
-    // Prevent editing owner
-    if (existingUser.role === 'OWNER') {
-      throw new ForbiddenException('Tidak bisa mengubah data owner melalui endpoint ini');
+    if (existingUser.role === 'OWNER' && updateUserDto.fullname) {
+      if (updateUserDto.permissionIds !== undefined) {
+         throw new ForbiddenException('Tidak bisa mengubah permission owner melalui endpoint ini');
+      }
+      // allow owner to update their own name
+      const user = await this.prisma.user.update({
+        where: { id },
+        data: { fullname: updateUserDto.fullname },
+        select: USER_SELECT,
+      });
+      return { message: 'User berhasil diperbarui', data: mapUserResponse(user) };
     }
 
-    const user = await this.prisma.user.update({
-      where: { id },
-      data: { fullname: updateUserDto.fullname },
-      select: USER_SELECT,
+    const user = await this.prisma.$transaction(async (prisma) => {
+      const updateData: any = {};
+      if (updateUserDto.fullname) {
+        updateData.fullname = updateUserDto.fullname;
+      }
+      
+      const updated = await prisma.user.update({
+        where: { id },
+        data: updateData,
+        select: USER_SELECT,
+      });
+
+      if (existingUser.role === 'KASIR' && updateUserDto.permissionIds !== undefined) {
+        await (prisma as any).user_permission.deleteMany({
+          where: { user_id: id },
+        });
+
+        if (updateUserDto.permissionIds.length > 0) {
+          await (prisma as any).user_permission.createMany({
+            data: updateUserDto.permissionIds.map((permId: number) => ({
+              user_id: id,
+              permission_id: permId,
+            }))
+          });
+        }
+
+        return await prisma.user.findUniqueOrThrow({
+           where: { id },
+           select: USER_SELECT,
+        });
+      }
+
+      return updated;
     });
 
     this.logger.log(`User ${id} berhasil diperbarui`);
 
     return {
       message: 'User berhasil diperbarui',
-      data: user,
+      data: mapUserResponse(user),
     };
   }
 
@@ -202,7 +259,7 @@ export class UsersService {
 
     return {
       message: `Status user berhasil diubah menjadi ${updateStatusDto.status}`,
-      data: user,
+      data: mapUserResponse(user),
     };
   }
 
@@ -243,6 +300,47 @@ export class UsersService {
 
     return {
       message: 'PIN berhasil direset',
+      data: null,
+    };
+  }
+
+  async changePin(
+    userId: number,
+    changePinDto: ChangePinDto,
+  ): Promise<{ message: string; data: null }> {
+    const user = await this.prisma.user.findFirst({
+      where: { id: userId, deleted_at: null },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User tidak ditemukan');
+    }
+
+    const isPinValid = await bcrypt.compare(changePinDto.oldPin, user.pin);
+    if (!isPinValid) {
+      throw new ConflictException('PIN lama tidak sesuai');
+    }
+    
+    if (changePinDto.oldPin === changePinDto.newPin) {
+      throw new ConflictException('PIN baru tidak boleh sama dengan PIN lama');
+    }
+
+    const hashedPin = await bcrypt.hash(changePinDto.newPin, BCRYPT_SALT_ROUNDS);
+
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pin: hashedPin },
+    });
+
+    // Revoke all refresh tokens for this user (security measure) so they must re-login
+    await this.prisma.refresh_token.deleteMany({
+      where: { user_id: userId },
+    });
+
+    this.logger.log(`PIN user ${userId} (${user.role}) berhasil diubah sendiri`);
+
+    return {
+      message: 'PIN berhasil diubah. Silakan login kembali.',
       data: null,
     };
   }

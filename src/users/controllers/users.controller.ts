@@ -23,6 +23,7 @@ import { CreateUserDto } from '../dto/create-user.dto.js';
 import { UpdateUserDto } from '../dto/update-user.dto.js';
 import { UpdateStatusDto } from '../dto/update-status.dto.js';
 import { ResetPinDto } from '../dto/reset-pin.dto.js';
+import { ChangePinDto } from '../dto/change-pin.dto.js';
 import { Roles } from '../../auth/decorators/roles.decorator.js';
 import { Permissions } from '../../auth/decorators/permissions.decorator.js';
 import { CurrentUser } from '../../auth/decorators/current-user.decorator.js';
@@ -165,6 +166,23 @@ export class UsersController {
     @CurrentUser() user: JwtPayload,
   ) {
     return this.usersService.resetPin(id, resetPinDto, user.role);
+  }
+
+  @Patch('profile/change-pin')
+  @ApiOperation({
+    summary: 'Ubah PIN sendiri',
+    description: 'Mengubah PIN user yang sedang login (Owner atau Kasir). Karena ini PIN sendiri, tidak memerlukan ID di URL.',
+  })
+  @ApiBody({ type: ChangePinDto })
+  @ApiResponse({ status: 200, description: 'PIN berhasil diubah' })
+  @ApiResponse({ status: 400, description: 'Validasi gagal' })
+  @ApiResponse({ status: 409, description: 'PIN lama salah / Sama dengan baru' })
+  // endpoint ini bisa diakses OWNER maupun KASIR (tidak dibatasi Roles khusus), tetapi butuh token login yang valid
+  async changePin(
+    @Body() changePinDto: ChangePinDto,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.usersService.changePin(user.id, changePinDto);
   }
 
   @Delete(':id')

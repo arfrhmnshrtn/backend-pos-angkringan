@@ -31,6 +31,7 @@ model user {
 
   cash_balances      cash_balance[]      @relation("UserCreatedBalance")
   budget_allocations budget_allocation[] @relation("UserCreatedBudget")
+  user_permissions   user_permission[]
 
   created_at DateTime  @default(now())
   updated_at DateTime  @updatedAt
@@ -46,9 +47,23 @@ model permission {
   name String @unique
 
   role_permissions role_permission[]
+  user_permissions user_permission[]
 
   created_at DateTime @default(now())
   updated_at DateTime @updatedAt
+}
+
+model user_permission {
+  id            Int @id @default(autoincrement())
+  user_id       Int
+  permission_id Int
+
+  user       user       @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  permission permission @relation(fields: [permission_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, permission_id], name: "user_permission_unique")
+  @@index([user_id])
+  @@index([permission_id])
 }
 
 model role_permission {

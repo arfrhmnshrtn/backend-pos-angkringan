@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, IsEnum, Length, Matches, MaxLength } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, IsEnum, Length, Matches, MaxLength, IsArray, IsNumber, IsOptional } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Role } from '../../common/enums/role.enum.js';
 
 export class CreateUserDto {
@@ -33,4 +33,13 @@ export class CreateUserDto {
   @IsNotEmpty({ message: 'Role wajib diisi' })
   @IsEnum([Role.KASIR, Role.OWNER], { message: 'Role harus KASIR atau OWNER' })
   readonly role!: Role;
+
+  @ApiPropertyOptional({
+    description: 'Daftar ID permission (khusus kasir)',
+    type: [Number],
+  })
+  @IsOptional()
+  @IsArray({ message: 'Permissions harus berupa array' })
+  @IsNumber({}, { each: true, message: 'ID permission harus berupa angka' })
+  readonly permissionIds?: number[];
 }
