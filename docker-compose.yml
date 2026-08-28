@@ -3,7 +3,7 @@ version: '3.8'
 services:
   app:
     image: node:22
-    container_name: nest_dev
+    container_name: app_angkringan
     working_dir: /app
     volumes:
       - .:/app
@@ -17,7 +17,7 @@ services:
 
   db:
     image: postgres:15
-    container_name: backend_angkringan
+    container_name: db_angkringan
     restart: always
     environment:
       POSTGRES_USER: postgres
