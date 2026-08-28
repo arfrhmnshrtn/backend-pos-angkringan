@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  app:
+    image: node:22
+    container_name: nest_dev
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - '3000:3000'
+    command: sh -c "npm install && npx prisma generate && npm run start:dev"
+    env_file:
+      - .env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:15
+    container_name: backend_angkringan
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: arief140105
+      POSTGRES_DB: db_angkringan
+    ports:
+      - '5432:5432'
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
