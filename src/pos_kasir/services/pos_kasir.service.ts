@@ -24,8 +24,19 @@ export class PosKasirService {
 
   constructor(private readonly prisma: PrismaService) {}
 
-  async createOrder(createDto: CreatePesananDto) {
-    const { items, nama_pelanggan } = createDto;
+  async createOrder(createDto: CreatePesananDto, userId: number) {
+    const { items, nama_pelanggan, metode_pembayaran, status_pembayaran } = createDto;
+
+    // Determine the final status: if provided, use it; otherwise default to 'belum_bayar'
+    const finalStatus = status_pembayaran || 'belum_bayar';
+    const finalMetode = metode_pembayaran || null;
+
+    // If status is lunas, payment method is required
+    if (finalStatus === 'lunas' && !finalMetode) {
+      throw new BadRequestException(
+        'Metode pembayaran wajib diisi saat status lunas',
+      );
+    }
 
     return this.prisma.$transaction(async (tx) => {
       let total_item = 0;
@@ -78,6 +89,8 @@ export class PosKasirService {
           nama_pelanggan: nama_pelanggan || null,
           total_item,
           total_harga,
+          status: finalStatus,
+          metode_pembayaran: finalMetode,
           detail_pesanan: {
             create: detail_pesanan_data,
           },
@@ -87,9 +100,61 @@ export class PosKasirService {
         },
       });
 
+      // === Handle inline payment processing ===
+      if (finalStatus === 'lunas') {
+        // Find or create 'Penjualan' category
+        let kategori = await tx.kategori_keuangan.findUnique({
+          where: { nama: 'Penjualan' },
+        });
+
+        if (!kategori) {
+          kategori = await tx.kategori_keuangan.create({
+            data: {
+              nama: 'Penjualan',
+              jenis: 'pemasukan',
+            },
+          });
+        }
+
+        // Create financial transaction record
+        await tx.transaksi_keuangan.create({
+          data: {
+            nomor_transaksi: nomor_pesanan,
+            jenis: 'pemasukan',
+            id_kategori: kategori.id,
+            nominal: total_harga,
+            metode_pembayaran: finalMetode,
+            keterangan: `Pembayaran Pesanan ${nomor_pesanan}`,
+            id_pesanan: pesanan.id,
+            id_user: userId,
+          },
+        });
+      } else if (finalStatus === 'hutang') {
+        // Create debt record
+        await tx.debt.create({
+          data: {
+            type: 'CUSTOMER',
+            customer_name:
+              nama_pelanggan || `Pelanggan POS ${nomor_pesanan}`,
+            note: 'Otomatis dari transaksi POS',
+            total_amount: total_harga,
+            paid_amount: 0,
+            remaining_amount: total_harga,
+            status: 'BELUM_LUNAS',
+            id_pesanan: pesanan.id,
+            created_by: userId,
+          },
+        });
+      }
+
       return {
         success: true,
-        message: 'Pesanan berhasil dibuat',
+        message:
+          finalStatus === 'lunas'
+            ? 'Pesanan berhasil dibuat & pembayaran tercatat'
+            : finalStatus === 'hutang'
+              ? 'Pesanan berhasil dibuat & dicatat sebagai hutang'
+              : 'Pesanan berhasil dibuat',
         data: pesanan,
       };
     });

@@ -38,6 +38,16 @@ export class CreatePesananDto {
   @Type(() => CreatePesananItemDto)
   @IsNotEmpty()
   readonly items!: CreatePesananItemDto[];
+
+  @ApiPropertyOptional({ enum: metode_pembayaran, example: 'tunai' })
+  @IsEnum(metode_pembayaran)
+  @IsOptional()
+  readonly metode_pembayaran?: metode_pembayaran;
+
+  @ApiPropertyOptional({ enum: status_pesanan, example: 'lunas' })
+  @IsEnum(status_pesanan)
+  @IsOptional()
+  readonly status_pembayaran?: status_pesanan;
 }
 
 export class UpdatePembayaranDto {

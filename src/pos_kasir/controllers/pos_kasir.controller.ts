@@ -28,9 +28,12 @@ export class PosKasirController {
   constructor(private readonly posKasirService: PosKasirService) {}
 
   @Post()
-  @ApiOperation({ summary: 'Buat pesanan baru dari kasir' })
-  async create(@Body() createPesananDto: CreatePesananDto) {
-    return this.posKasirService.createOrder(createPesananDto);
+  @ApiOperation({ summary: 'Buat pesanan baru dari kasir (dengan pembayaran langsung)' })
+  async create(
+    @Body() createPesananDto: CreatePesananDto,
+    @CurrentUser('id') userId: number,
+  ) {
+    return this.posKasirService.createOrder(createPesananDto, userId);
   }
 
   @Get()
